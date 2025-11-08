@@ -1,35 +1,59 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
+import { useState, useEffect } from 'react'
+import { Routes, Route } from 'react-router-dom';
+import LoginPage from './LoginPage';
 import './App.css'
 
-function App() {
-  const [count, setCount] = useState(0)
+function Dashboard() {
+  const [requests, setRequests] = useState([]);
+
+  useEffect(() => {
+    fetch('/api/requests')
+      .then(res => res.json())
+      .then(data => setRequests(data));
+  }, []);
+
+  const handleApprove = (id) => {
+    fetch(`/api/approve/${id}`, { method: 'POST' })
+      .then(res => res.json())
+      .then(data => {
+        console.log(data.message);
+        // Remove the approved request from the list
+        setRequests(requests.filter(req => req.id !== id));
+      });
+  };
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <div className="dashboard-container">
+      <h1>Refill Requests</h1>
+      <table>
+        <thead>
+          <tr>
+            <th>Patient</th>
+            <th>Medication</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {requests.map(req => (
+            <tr key={req.id}>
+              <td>{req.patient}</td>
+              <td>{req.medication}</td>
+              <td><button onClick={() => handleApprove(req.id)}>Approve</button></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<LoginPage />} />
+      <Route path="/dashboard" element={<Dashboard />} />
+    </Routes>
+  );
 }
 
 export default App
