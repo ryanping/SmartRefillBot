@@ -1,0 +1,10 @@
+Flask==2.3.3
+Flask-Bcrypt==1.0.1
+flask-cors==6.0.1
+Flask-Login==0.6.3
+numpy==2.3.3
+pytest-mock==3.15.1
+python-dateutil==2.9.0.post0
+python-dotenv==1.1.1
+python-http-client==3.3.7
+typing_extensions==4.15.0
