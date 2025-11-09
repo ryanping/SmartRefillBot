@@ -1,11 +1,37 @@
 from flask import Flask, jsonify, request
-app = Flask(__name__)
+import sqlite3
 
-# temporary database
-database = {
-    "requests": [],
-    "next_id": 1
-}
+app = Flask(__name__)
+DATABASE = 'refill_requests.db'
+
+def get_db():
+    conn = sqlite3.connect(DATABASE)
+    conn.row_factory = sqlite3.Row # This allows accessing columns by name
+    return conn
+
+def init_db():
+    with app.app_context():
+        db = get_db()
+        cursor = db.cursor()
+        cursor.executescript('''
+            CREATE TABLE IF NOT EXISTS doctors (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                username TEXT UNIQUE NOT NULL,
+                password TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS patients (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                phone TEXT UNIQUE NOT NULL,
+                email TEXT,
+                doctor_id INTEGER,
+                prescription TEXT,
+                FOREIGN KEY (doctor_id) REFERENCES doctors(id)
+            );
+        ''')
+        db.commit()
 
 @app.route("/")
 def home():
@@ -20,23 +46,26 @@ def sms_inbound():
     # For example, parsing the message and creating a new refill request.
     accepted_medications = ["lisinopril", "metformin"]
 
-    patient_phone = request.form.get('From')
-    # should look up the patient name based on phone number from database
-    message_body = request.form.get('Body')
-
+    patient_phone = request.form.get('From', '')
+    message_body = request.form.get('Body', '')
 
     for med in accepted_medications:
         if med in message_body.lower():
-            # include patient name as well once you add the database
-            new_request = {
-                "id": database["next_id"],
-                "patient_phone": patient_phone,
-                "medication": med,
-                "status": "pending"
-            }
-            database["requests"].append(new_request)
-            database["next_id"] += 1
-            print(f"New refill request created: {new_request}")
+            try:
+                db = get_db()
+                cursor = db.cursor()
+                # In a real app, you'd look up the patient name from the patients table
+                # For now, we can use a placeholder or derive from the phone number
+                patient_name = f"Patient ({patient_phone[-4:]})"
+                cursor.execute(
+                    "INSERT INTO requests (patient_phone, patient_name, medication) VALUES (?, ?, ?)",
+                    (patient_phone, patient_name, med)
+                )
+                db.commit()
+                print(f"New refill request for {med} from {patient_phone} created.")
+            except sqlite3.Error as e:
+                print(f"Database error: {e}")
+                return "Error processing request", 500
             break
 
 
@@ -48,28 +77,29 @@ def get_requests():
     """
     The endpoint your Physician Dashboard calls to get the list of pending refills.
     """
-    # In a real application, you would fetch this data from a database.
-
-    """dummy_requests = [
-        {"id": 1, "patient": "John Doe", "medication": "Lisinopril 10mg", "status": "pending"},
-        {"id": 2, "patient": "Jane Smith", "medication": "Metformin 500mg", "status": "pending"},
-    ]
-    return jsonify(dummy_requests)"""
-
-    pending = [req for req in database["requests"] if req["status"] == "pending"]
-    return jsonify(pending)
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("SELECT id, patient_name as patient, medication, status FROM requests WHERE status = 'pending'")
+    rows = cursor.fetchall()
+    # Convert rows to a list of dictionaries
+    pending_requests = [dict(row) for row in rows]
+    return jsonify(pending_requests)
 
 # From physician to website
 @app.route("/api/approve/<int:id>", methods=['POST'])
 def approve_request(id):
-    for req in database["requests"]:
-        if req["id"] == id:
-            req["status"] = "approved"
-            print(f"Request with ID {id} has been approved.")
-            return jsonify({"status": "success", "message": f"Request {id} approved."})
-        
-    # if no matching ID found
-    return jsonify({"status": "error", "message": f"Request {id} not found."}), 404
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("UPDATE requests SET status = 'approved' WHERE id = ?", (id,))
+    db.commit()
+
+    if cursor.rowcount == 0:
+        return jsonify({"status": "error", "message": f"Request {id} not found."}), 404
+    
+    print(f"Request with ID {id} has been approved.")
+    return jsonify({"status": "success", "message": f"Request {id} approved."})
 
 if __name__ == "__main__":
+    # Initialize the database and create tables if they don't exist
+    init_db()
     app.run(debug=True, host="0.0.0.0")
