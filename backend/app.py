@@ -4,6 +4,7 @@ import os
 from flask import Flask, jsonify, request
 from flask_cors import CORS  # <-- Import CORS
 from twilio.twiml.messaging_response import MessagingResponse
+from werkzeug.security import generate_password_hash, check_password_hash
 from twilio.rest import Client
 from dotenv import load_dotenv
 
@@ -78,10 +79,20 @@ def init_db():
                 medication TEXT NOT NULL,
                 answers_json TEXT NOT NULL  -- Stores answers as we get them
             );
+
+            -- Stores dashboard users (doctors, admins)
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                email TEXT UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL
+            );
             
             -- Add a mock patient for testing
             INSERT OR IGNORE INTO patients (name, phone) VALUES ('Jane Doe', '+15551234567');
             INSERT OR IGNORE INTO patients (name, phone) VALUES ('John Smith', '+15557654321');
+
+            -- Add a mock admin user for testing (password: "password")
+            INSERT OR IGIGNORE INTO users (email, password_hash) VALUES ('admin@example.com', 'pbkdf2:sha256:600000$V1i3I9k5jL3xG9pG$c799c8b7623d4055c953a8158a2f4e55b610b83945b6f183bff46344d34b8c3a');
         ''')
         print("Database initialized.")
         db.commit()
@@ -184,6 +195,31 @@ def sms_inbound():
     return str(twiml_response)
 
 # --- 5. API Routes for React Dashboard ---
+
+@app.route("/api/login", methods=['POST'])
+def login_user():
+    """
+    Handles user login for the React dashboard.
+    """
+    data = request.get_json()
+    if not data or not data.get('email') or not data.get('password'):
+        return jsonify({"error": "Email and password are required"}), 400
+
+    email = data['email']
+    password = data['password']
+
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
+    user = cursor.fetchone()
+
+    if not user or not check_password_hash(user['password_hash'], password):
+        return jsonify({"error": "Invalid credentials"}), 401
+
+    # In a real app, you would return a session token (e.g., JWT) here
+    # For now, a success message is sufficient for navigation.
+    return jsonify({"message": "Login successful"})
+
 
 @app.route("/api/pending-requests", methods=['GET'])
 def get_pending_requests():
