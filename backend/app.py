@@ -84,18 +84,15 @@ def init_db():
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 email TEXT UNIQUE NOT NULL,
-                password_hash TEXT NOT NULL,
-                role TEXT NOT NULL DEFAULT 'user'
+                password_hash TEXT NOT NULL
             );
             
             -- Add a mock patient for testing
             INSERT OR IGNORE INTO patients (name, phone) VALUES ('Jane Doe', '+15551234567');
             INSERT OR IGNORE INTO patients (name, phone) VALUES ('John Smith', '+15557654321');
 
-            -- Add mock users for testing (password: "password")
-            INSERT OR IGNORE INTO users (email, password_hash, role) VALUES ('admin@example.com', 'pbkdf2:sha256:600000$V1i3I9k5jL3xG9pG$c799c8b7623d4055c953a8158a2f4e55b610b83945b6f183bff46344d34b8c3a', 'admin');
-            INSERT OR IGNORE INTO users (email, password_hash, role) VALUES ('user@example.com', 'pbkdf2:sha256:600000$V1i3I9k5jL3xG9pG$c799c8b7623d4055c953a8158a2f4e55b610b83945b6f183bff46344d34b8c3a', 'user');
-
+            -- Add a mock admin user for testing (password: "password")
+            INSERT OR IGNORE INTO users (email, password_hash) VALUES ('admin@example.com', 'pbkdf2:sha256:600000$V1i3I9k5jL3xG9pG$c799c8b7623d4055c953a8158a2f4e55b610b83945b6f183bff46344d34b8c3a');
         ''')
         print("Database initialized.")
         db.commit()
@@ -221,7 +218,7 @@ def login_user():
 
     # In a real app, you would return a session token (e.g., JWT) here
     # For now, a success message is sufficient for navigation.
-    return jsonify({"message": "Login successful", "role": user['role']})
+    return jsonify({"message": "Login successful"})
 
 
 @app.route("/api/pending-requests", methods=['GET'])
@@ -269,19 +266,25 @@ def approve_request(request_id):
     cursor.execute("UPDATE requests SET status = 'approved' WHERE id = ?", (request_id,))
     db.commit()
 
-    # --- Send Twilio Confirmation SMS ---
-    try:
-        message_body = f"Your refill request for {medication} has been approved by your doctor."
-        message = twilio_client.messages.create(
-            to=patient_phone,
-            from_=TWILIO_PHONE_NUMBER,
-            body=message_body
-        )
-        print(f"Approval SMS sent: {message.sid}")
-    except Exception as e:
-        print(f"Error sending approval SMS: {e}")
+    sms_status_message = f"Request {request_id} approved and confirmation SMS sent."
 
-    return jsonify({"message": f"Request {request_id} approved."})
+    # --- Send Twilio Confirmation SMS ---
+    if twilio_client:
+        try:
+            message_body = f"Your refill request for {medication} has been approved by your doctor."
+            message = twilio_client.messages.create(
+                to=patient_phone,
+                from_=TWILIO_PHONE_NUMBER,
+                body=message_body
+            )
+            print(f"Approval SMS sent: {message.sid}")
+        except Exception as e:
+            print(f"Error sending approval SMS for request {request_id}: {e}")
+            sms_status_message = "Request approved, but confirmation SMS failed to send."
+    else:
+        sms_status_message = "Request approved, but SMS not sent (Twilio client not initialized)."
+
+    return jsonify({"status": "success", "message": sms_status_message})
 
 @app.route("/api/request/deny/<int:request_id>", methods=['POST'])
 def deny_request(request_id):
@@ -303,22 +306,28 @@ def deny_request(request_id):
     cursor.execute("UPDATE requests SET status = 'denied' WHERE id = ?", (request_id,))
     db.commit()
 
-    # --- Send Twilio "Book Appointment" SMS ---
-    try:
-        message_body = "Your doctor has reviewed your refill request. Please call the office to book an appointment."
-        message = twilio_client.messages.create(
-            to=patient_phone,
-            from_=TWILIO_PHONE_NUMBER,
-            body=message_body
-        )
-        print(f"Denial SMS sent: {message.sid}")
-    except Exception as e:
-        print(f"Error sending denial SMS: {e}")
+    sms_status_message = f"Request {request_id} denied and notification SMS sent."
 
-    return jsonify({"message": f"Request {request_id} denied."})
+    # --- Send Twilio "Book Appointment" SMS ---
+    if twilio_client:
+        try:
+            message_body = "Your doctor has reviewed your refill request. Please call the office to book an appointment."
+            message = twilio_client.messages.create(
+                to=patient_phone,
+                from_=TWILIO_PHONE_NUMBER,
+                body=message_body
+            )
+            print(f"Denial SMS sent: {message.sid}")
+        except Exception as e:
+            print(f"Error sending denial SMS for request {request_id}: {e}")
+            sms_status_message = "Request denied, but notification SMS failed to send."
+    else:
+        sms_status_message = "Request denied, but SMS not sent (Twilio client not initialized)."
+
+    return jsonify({"status": "success", "message": sms_status_message})
 
 # --- 6. Run the App ---
 if __name__ == "__main__":
     init_db()  # Initialize the database on startup
     # Host="0.0.0.0" makes it accessible on your network (for ngrok)
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    app.run(debug=True, host="0.0.0.0", port=5001)
