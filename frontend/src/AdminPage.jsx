@@ -25,6 +25,7 @@ function AdminPage() {
 
   return (
     <div className="admin-container">
+    <h1>Smart Refiller</h1>
       <h1>Admin Page: Creating New Accounts</h1>
       <form onSubmit={handleSubmit} className="admin-form">
         <input

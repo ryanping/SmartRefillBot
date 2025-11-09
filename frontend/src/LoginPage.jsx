@@ -1,16 +1,33 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import LoginPageBase, { Logo, Title, Username, Footer, Input} from '@react-login-page/base';
+import LoginPageBase, { Logo, Title, Username, Password, Footer, Input} from '@react-login-page/base';
 import './LoginPage.css';
 
 function LoginPage() {
   const navigate = useNavigate();
+  const [error, setError] = useState('');
 
-  const handleLogin = ({ email, password }) => {
-    // In a real app, you'd have authentication logic here.
-    // For now, we'll just navigate to the dashboard on submit.
-    console.log('Logging in with:', email, password);
-    navigate('/dashboard');
+  const handleLogin = async ({ email, password }) => {
+    setError(''); // Clear previous errors
+    try {
+      const response = await fetch('http://127.0.0.1:5000/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (response.ok) {
+        console.log('Login successful');
+        navigate('/dashboard');
+      } else {
+        const errorData = await response.json();
+        setError(errorData.error || 'Login failed. Please try again.');
+      }
+    } catch (err) {
+      setError('Network error. Could not connect to the server.');
+    }
   };
 
   return (
@@ -20,6 +37,8 @@ function LoginPage() {
         Smart Refiller Login
       </Title>
       <Username name="email" placeholder="Email" />
+      <Password name="password" placeholder="Password" />
+      {error && <div className="login-error">{error}</div>}
       <a href="#" onClick={(event) => event.preventDefault()}>
           Forgot Password?
         </a>
@@ -28,4 +47,3 @@ function LoginPage() {
 }
 
 export default LoginPage;
-

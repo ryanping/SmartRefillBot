@@ -48,3 +48,9 @@
   --login-btn-hover: #259dff;
   --login-btn-active: #1987e1;
 }
+
+.login-error {
+  color: #e74c3c;
+  margin-top: 10px;
+  text-align: center;
+}
