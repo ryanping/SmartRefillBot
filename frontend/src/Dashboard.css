@@ -1,0 +1,16 @@
+.dashboard-container {
+  display: flex;
+  height: 100vh;
+}
+
+.sidebar {
+  flex: 1; /* Take up 1/3 of the space */
+  border-right: 1px solid #ccc; /* A slight grey border */
+  padding: 20px;
+  background-color: #f7f7f7; /* A light background for the sidebar */
+}
+
+.messaging-panel {
+  flex: 2; /* Take up 2/3 of the space */
+  padding: 20px;
+}

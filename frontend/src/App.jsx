@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
 import { Routes, Route } from 'react-router-dom';
 import LoginPage from './LoginPage';
+import './Dashboard.css';
 import './App.css'
 
 function Dashboard() {
   const [requests, setRequests] = useState([]);
+  const [selectedPatient, setSelectedPatient] = useState(null);
 
   useEffect(() => {
     fetch('/api/requests')
@@ -22,31 +24,43 @@ function Dashboard() {
       });
   };
 
+  const patients = [...new Set(requests.map(req => req.patient))];
+  const selectedRequest = requests.find(req => req.patient === selectedPatient);
+
   return (
     <div className="dashboard-container">
-      <h1>Refill Requests</h1>
-      <table>
-        <thead>
-          <tr>
-            <th>Patient</th>
-            <th>Medication</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {requests.map(req => (
-            <tr key={req.id}>
-              <td>{req.patient}</td>
-              <td>{req.medication}</td>
-              <td><button onClick={() => handleApprove(req.id)}>Approve</button></td>
-            </tr>
+      <div className="sidebar">
+        <h2>Messages</h2>
+        <ul>
+          {patients.map(patient => (
+            <li key={patient} onClick={() => setSelectedPatient(patient)} className={selectedPatient === patient ? 'active' : ''}>
+              {patient}
+            </li>
           ))}
-        </tbody>
-      </table>
+        </ul>
+      </div>
+      <div className="messaging-panel">
+        {selectedPatient && selectedRequest ? (
+          <>
+            <div className="messaging-header">
+              <h3>{selectedPatient}</h3>
+              <p>Requesting: {selectedRequest.medication}</p>
+            </div>
+            <div className="message-body">
+              {/* Future messaging UI goes here */}
+              <p>Messaging interface for {selectedPatient}.</p>
+            </div>
+            <div className="message-footer">
+              <button onClick={() => handleApprove(selectedRequest.id)}>Approve Request</button>
+            </div>
+          </>
+        ) : (
+          <div className="placeholder">Select a patient to start messaging.</div>
+        )}
+      </div>
     </div>
   );
 }
-
 function App() {
   return (
     <Routes>

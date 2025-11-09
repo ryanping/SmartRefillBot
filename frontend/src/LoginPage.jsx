@@ -20,7 +20,6 @@ function LoginPage() {
         Smart Refiller Login
       </Title>
       <Username name="email" placeholder="Email" />
-      <Footer>Not a member? <a href="#">Sign up now</a></Footer>
     </LoginPageBase>
   );
 }
