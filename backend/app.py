@@ -84,15 +84,18 @@ def init_db():
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 email TEXT UNIQUE NOT NULL,
-                password_hash TEXT NOT NULL
+                password_hash TEXT NOT NULL,
+                role TEXT NOT NULL DEFAULT 'user'
             );
             
             -- Add a mock patient for testing
             INSERT OR IGNORE INTO patients (name, phone) VALUES ('Jane Doe', '+15551234567');
             INSERT OR IGNORE INTO patients (name, phone) VALUES ('John Smith', '+15557654321');
 
-            -- Add a mock admin user for testing (password: "password")
-            INSERT OR IGIGNORE INTO users (email, password_hash) VALUES ('admin@example.com', 'pbkdf2:sha256:600000$V1i3I9k5jL3xG9pG$c799c8b7623d4055c953a8158a2f4e55b610b83945b6f183bff46344d34b8c3a');
+            -- Add mock users for testing (password: "password")
+            INSERT OR IGNORE INTO users (email, password_hash, role) VALUES ('admin@example.com', 'pbkdf2:sha256:600000$V1i3I9k5jL3xG9pG$c799c8b7623d4055c953a8158a2f4e55b610b83945b6f183bff46344d34b8c3a', 'admin');
+            INSERT OR IGNORE INTO users (email, password_hash, role) VALUES ('user@example.com', 'pbkdf2:sha256:600000$V1i3I9k5jL3xG9pG$c799c8b7623d4055c953a8158a2f4e55b610b83945b6f183bff46344d34b8c3a', 'user');
+
         ''')
         print("Database initialized.")
         db.commit()
@@ -218,7 +221,7 @@ def login_user():
 
     # In a real app, you would return a session token (e.g., JWT) here
     # For now, a success message is sufficient for navigation.
-    return jsonify({"message": "Login successful"})
+    return jsonify({"message": "Login successful", "role": user['role']})
 
 
 @app.route("/api/pending-requests", methods=['GET'])

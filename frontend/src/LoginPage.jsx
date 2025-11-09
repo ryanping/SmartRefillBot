@@ -20,7 +20,12 @@ function LoginPage() {
 
       if (response.ok) {
         console.log('Login successful');
-        navigate('/dashboard');
+        const data = await response.json();
+        if (data.role === 'admin') {
+          navigate('/admin');
+        } else {
+          navigate('/dashboard');
+        }
       } else {
         const errorData = await response.json();
         setError(errorData.error || 'Login failed. Please try again.');
