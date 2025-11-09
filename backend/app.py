@@ -1,6 +1,9 @@
 from flask import Flask, jsonify, request
 app = Flask(__name__)
 
+# temporary database
+database = {}
+
 @app.route("/")
 def home():
     return "Hello, Flask!"
@@ -27,6 +30,7 @@ def get_requests():
     ]
     return jsonify(dummy_requests)
 
+# From physician to website
 @app.route("/api/approve/<int:id>", methods=['POST'])
 def approve_request(id):
     print(f"Request with ID {id} has been approved.")
