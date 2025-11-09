@@ -20,8 +20,12 @@ function LoginPage() {
         Smart Refiller Login
       </Title>
       <Username name="email" placeholder="Email" />
+      <a href="#" onClick={(event) => event.preventDefault()}>
+          Forgot Password?
+        </a>
     </LoginPageBase>
   );
 }
 
 export default LoginPage;
+

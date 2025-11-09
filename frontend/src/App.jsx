@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Routes, Route } from 'react-router-dom';
 import LoginPage from './LoginPage';
+import AdminPage from './AdminPage';
 import './Dashboard.css';
 import './App.css'
 
@@ -66,6 +67,7 @@ function App() {
     <Routes>
       <Route path="/" element={<LoginPage />} />
       <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="/admin" element={<AdminPage />} />
     </Routes>
   );
 }
